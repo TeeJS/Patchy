@@ -100,6 +100,10 @@ jobs:
 
       - name: Build, sign, and package
         shell: cmd
+        env:
+          # sign-azure.ps1 re-logs in with a fresh OIDC token before each signature.
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: scripts\release\build-release.bat
 
       - name: Core tests

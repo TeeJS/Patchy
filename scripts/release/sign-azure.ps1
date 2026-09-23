@@ -17,6 +17,17 @@ foreach ($required in @($dlib, $metadata, $Path)) {
   if (-not (Test-Path -LiteralPath $required)) { throw "Not found: $required" }
 }
 
+# In GitHub Actions, log the Azure CLI in again with a fresh OIDC token before every
+# signature: the federated assertion azure/login used expires after five minutes, long
+# before the release build reaches its first signing step.
+if ($env:ACTIONS_ID_TOKEN_REQUEST_URL -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
+  $tokenUri = $env:ACTIONS_ID_TOKEN_REQUEST_URL + '&audience=api://AzureADTokenExchange'
+  $oidc = Invoke-RestMethod -Uri $tokenUri -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+  az login --service-principal --username $env:AZURE_CLIENT_ID --tenant $env:AZURE_TENANT_ID `
+    --federated-token $oidc.value --allow-no-subscriptions --output none
+  if ($LASTEXITCODE -ne 0) { throw "Azure CLI login failed (exit $LASTEXITCODE)." }
+}
+
 $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
   Where-Object { $_.Directory.Name -eq 'x64' } |
   Sort-Object FullName -Descending |
