@@ -55,6 +55,14 @@ Build order matters: finalize the README first (the Windows zip/installer embed 
 
 `build\package` must never hold a previous version's files once a new build starts (Seth, September 2026). The mac and Linux builders write versioned artifacts (`Patchy-<version>.dmg`, `Patchy-<version>.flatpak`); the upload scripts copy the newest one over the published names `PatchyMacOS.dmg` and `PatchyLinux.flatpak` and upload that copy, so those unversioned files are upload staging copies of whatever shipped LAST. `release-mac.ps1` and `release-linux.ps1` delete them along with the old versioned artifacts, and the Windows packager deletes its own final-named outputs before rebuilding. An agent that builds packages by hand must do the same delete before reporting the folder as release-ready.
 
+## GitHub Releases (TeeJS fork, Windows)
+
+`.github/workflows/release-windows.yml` builds, signs, and publishes the Windows packages on the `TeeJS/Patchy` fork. Pushing a tag `v<version>` that matches `project(... VERSION)` creates a GitHub Release with `PatchyWindowsInstaller.exe` and `PatchyWindowsNoInstaller.zip`; a manual run (workflow_dispatch) produces the same signed packages as a run artifact only. The job installs Qt 6.8.3 into `.deps`, runs `build-release.bat` and the core suite, and fails on a tag/version mismatch.
+
+Signing: the workflow sets `PATCHY_SIGN_SCRIPT` to `scripts\release\sign-azure.ps1`, which `:SignFile` calls instead of `RT_PROJECTS`. It signs through Azure Artifact Signing (account `openquakesigning`, profile `openquake-public`) with an Azure CLI session from `azure/login`. Login is OIDC: an Entra app registration with a federated credential for subject `repo:TeeJS/Patchy:environment:release` and the Artifact Signing Certificate Profile Signer role on the signing account. Secrets `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` live on the `release` environment. No client secret is stored.
+
+The fork's update check reads `latest_version.json` from `TeeJS/Patchy` main (`src/ui/update_checker.cpp`), and the Windows `download_url` points at `releases/latest/download/PatchyWindowsInstaller.exe`. Bump the windows `version` there when publishing; merges from upstream will conflict on both files.
+
 ## Release safety checks
 
 Three checks keep a broken build from looking like a shipped one. Keep every escape hatch explicit and opt-in, and keep the safe behavior the default.

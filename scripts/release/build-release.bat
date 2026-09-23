@@ -192,6 +192,12 @@ rem without the signing credentials. Without it a missing signer is a hard error
 rem script builds what gets published, SmartScreen punishes an unsigned installer, and
 rem "signing skipped" must never scroll past unnoticed in a long release log. The macOS
 rem side had the same silent skip; see PATCHY_REQUIRE_SIGNING in packaging/macos/make-dmg.sh.
+rem PATCHY_SIGN_SCRIPT (the GitHub release workflow) signs and verifies through
+rem scripts\release\sign-azure.ps1 instead of RT_PROJECTS.
+if defined PATCHY_SIGN_SCRIPT (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%PATCHY_SIGN_SCRIPT%" "%SIGN_TARGET%"
+  exit /b !ERRORLEVEL!
+)
 if not defined RT_PROJECTS (
   if /i "%PATCHY_ALLOW_UNSIGNED%"=="1" (
     echo RT_PROJECTS is not set; signing skipped for "%SIGN_TARGET%" ^(PATCHY_ALLOW_UNSIGNED=1^).
